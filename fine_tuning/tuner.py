@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import torch
-import pytorch_lightning as ppl
+import pytorch_lightning as pl
 import wandb
 from evaluation.evaluator_callback import RetrievalMetricsCallback
 
