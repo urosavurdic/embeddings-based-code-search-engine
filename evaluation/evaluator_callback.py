@@ -21,9 +21,10 @@ class RetrievalMetricsCallback(pl.Callback):
             dataset = self.datamodule.test_dataset
         else:
             raise ValueError("split must be 'val' or 'test'")
-
+        base_dataset = dataset.dataset if hasattr(dataset, "dataset") else dataset
         search_engine = EmbeddingSearchEngine(encoder=pl_module.get_encoder())
-        search_engine.build_index(dataset.code_corpus)
+        
+        search_engine.build_index(base_dataset.code_corpus)
 
         evaluator = SearchEngineEvaluator(search_engine, k=self.k)
         metrics = evaluator.evaluate(dataset, verbose=False)
