@@ -1,13 +1,3 @@
-"""
-Embedding-based Search Engine
-
-Implements a simple semantic search engine using Sentence Transformers and FAISS.
-This script:
-- Builds a vector index for a given document collection
-- Provides a search API for queries
-- Supports saving/loading of the index and document list
-"""
-
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import faiss
@@ -19,14 +9,14 @@ class EmbeddingSearchEngine:
     A simple semantic search engine using sentence embeddings and FAISS for similarity search.
     """
 
-    def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
+    def __init__(self, encoder=None, model_name: str = 'all-MiniLM-L6-v2'):
         """
         Initialize the search engine.
-
         Args:
-            model_name: Hugging Face model name for SentenceTransformer.
+            encoder: A trained model with an .encode() method (e.g., from Lightning module).
+            model_name: Only used if encoder is None.
         """
-        self.model = SentenceTransformer(model_name)
+        self.model = encoder if encoder is not None else SentenceTransformer(model_name)
         self.index = None
         self.documents = []
 
@@ -37,10 +27,41 @@ class EmbeddingSearchEngine:
         Args:
             documents: List of text documents.
         """
+        import torch
+        import numpy as np
+
         self.documents = documents
         print(f"[INFO] Encoding {len(documents)} documents...")
-        embeddings = self.model.encode(documents, normalize_embeddings=True, show_progress_bar=True, batch_size=batch_size)
 
+        # --- Encode depending on model type ---
+        if hasattr(self.model, "encode"):
+            # SentenceTransformer-style (pretrained)
+            embeddings = self.model.encode(
+                documents,
+                normalize_embeddings=True,
+                show_progress_bar=True,
+                batch_size=batch_size
+            )
+        else:
+            # PyTorch model (fine-tuned encoder)
+            self.model.eval()
+            all_embeddings = []
+            with torch.no_grad():
+                for i in range(0, len(documents), batch_size):
+                    batch = documents[i:i + batch_size]
+                    inputs = self.model.tokenizer(
+                        batch, padding=True, truncation=True, return_tensors="pt"
+                    ).to(self.model.device)
+                    outputs = self.model(**inputs)
+                    if isinstance(outputs, tuple):
+                        embeddings = outputs[0]
+                    else:
+                        embeddings = outputs
+                    embeddings = torch.nn.functional.normalize(embeddings, dim=-1)
+                    all_embeddings.append(embeddings.cpu().numpy())
+            embeddings = np.vstack(all_embeddings)
+
+        # --- Build FAISS index ---
         dimension = embeddings.shape[1]
         self.index = faiss.IndexFlatIP(dimension)
         self.index.add(embeddings)
