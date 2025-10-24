@@ -3,3 +3,8 @@
 __pycache__/
 *.npy
 *.faiss
+*.venv
+.env
+.venv/
+.yml
+logs/
