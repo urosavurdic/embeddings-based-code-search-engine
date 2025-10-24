@@ -50,7 +50,7 @@ class CodeSearchModel(pl.LightningModule):
         c_emb = self.encode(codes)
         loss = self.contrastive_loss(q_emb, c_emb)
         return {"loss": loss, "q_emb": q_emb, "c_emb": c_emb}
-
+    
     def training_step(self, batch: Dict[str, Any], batch_idx: int):
         out = self(batch["queries"], batch["codes"])
         loss = out["loss"]
@@ -58,7 +58,7 @@ class CodeSearchModel(pl.LightningModule):
         if wandb.run:
             wandb.log({"train/loss": loss.item(), "step": self.global_step})
         return loss
-
+    
     def validation_step(self, batch: Dict[str, Any], batch_idx: int):
         out = self(batch["queries"], batch["codes"])
         loss = out["loss"]

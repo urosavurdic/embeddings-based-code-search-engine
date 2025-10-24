@@ -87,17 +87,32 @@ class CoSQADataModule(pl.LightningDataModule):
         Returns DataLoader for training data.
         """
         return DataLoader(self.data_train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.on_gpu, collate_fn=self.collate_fn)
+    
     def val_dataloader(self) -> DataLoader:
         """
         Returns DataLoader for validation data.
         """
         return DataLoader(self.data_val, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.on_gpu, collate_fn=self.collate_fn)
+    
     def test_dataloader(self) -> DataLoader:
         """
         Returns DataLoader for test data.
         """
         return DataLoader(self.data_test, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.on_gpu, collate_fn=self.collate_fn)
     
+
+    @property
+    def train_dataset(self):
+        return self.data_train
+
+    @property
+    def val_dataset(self):
+        return self.data_val
+
+    @property
+    def test_dataset(self):
+        return self.data_test
+
     @staticmethod
     def collate_fn(batch: List[Tuple[str, str, int]]) -> Dict[str, Any]:
         """

@@ -8,6 +8,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
 import pytorch_lightning as pl
 import wandb
+from evaluation.evaluator_callback import RetrievalMetricsCallback
+
 
 from code_search_model import CodeSearchModel
 from data.cosqa_module import CoSQADataModule 
@@ -71,11 +73,7 @@ def main():
     # Logger setup
     logger = pl.loggers.TensorBoardLogger("training/logs")
     if args.wandb:
-        logger = pl.loggers.WandbLogger(
-            project=args.project_name,
-            name=args.experiment_name,
-            log_model=True
-        )
+        logger = pl.loggers.WandbLogger()
         logger.watch(model)
         logger.log_hyperparams(vars(args))
 
@@ -98,6 +96,10 @@ def main():
     "devices": args.devices,
     "precision": args.precision,
     }
+
+    retrieval_callback = RetrievalMetricsCallback(datamodule=data, k=10, use_wandb=args.wandb)
+
+    callbacks = [early_stopping, checkpoint, retrieval_callback]
 
     trainer = pl.Trainer(**trainer_args, logger=logger, callbacks=callbacks)
 
