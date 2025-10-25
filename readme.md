@@ -63,3 +63,11 @@ jupyter notebook report.ipynb
 - **Loss**: InfoNCE (contrastive learning)
 - **Architecture**: Bi-encoder
 - **Optimizer**: AdamW with warmup
+
+## Results
+
+| Metric | Baseline | Fine-tuned | Improvement |
+|--------|----------|------------|-------------|
+| Recall@10 | 0.9685 | 0.9960 | +2.8% |
+| MRR@10 | 0.7856 | 0.9110 | +16.0% |
+| NDCG@10 | 0.8312 | 0.9320 | +12.1% |
