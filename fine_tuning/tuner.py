@@ -68,7 +68,6 @@ def main():
     pl_logger = pl.loggers.TensorBoardLogger("training/logs")
     if args.wandb:
         pl_logger = pl.loggers.WandbLogger(project=args.project_name, name=args.experiment_name)
-        pl_logger.watch(model)
         pl_logger.log_hyperparams(vars(args))
 
     early_stopping = pl.callbacks.EarlyStopping(monitor="val/loss", mode="min", patience=5)
