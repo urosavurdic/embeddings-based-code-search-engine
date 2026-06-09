@@ -1,18 +1,14 @@
 import argparse
-import importlib
-import sys
-from pathlib import Path
+import logging
 
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-import torch
 import pytorch_lightning as pl
 import wandb
+
 from evaluation.evaluator_callback import RetrievalMetricsCallback
+from fine_tuning.code_search_model import CodeSearchModel
+from data.cosqa_module import CoSQADataModule
 
-
-from code_search_model import CodeSearchModel
-from data.cosqa_module import CoSQADataModule 
+logger = logging.getLogger(__name__)
 
 
 def _setup_parser():
@@ -50,10 +46,10 @@ def _setup_parser():
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
     parser = _setup_parser()
     args = parser.parse_args()
 
-    # Instantiate model and data
     model = CodeSearchModel(
         model_name=args.model_name,
         lr=args.lr,
@@ -65,56 +61,45 @@ def main():
 
     data = CoSQADataModule(args)
 
-    # Load from checkpoint if provided
     if args.load_checkpoint:
-        print(f"[INFO] Loading from checkpoint: {args.load_checkpoint}")
+        logger.info("Loading from checkpoint: %s", args.load_checkpoint)
         model = CodeSearchModel.load_from_checkpoint(args.load_checkpoint)
 
-    # Logger setup
-    logger = pl.loggers.TensorBoardLogger("training/logs")
+    pl_logger = pl.loggers.TensorBoardLogger("training/logs")
     if args.wandb:
-        logger = pl.loggers.WandbLogger()
-        logger.watch(model)
-        logger.log_hyperparams(vars(args))
+        pl_logger = pl.loggers.WandbLogger(project=args.project_name, name=args.experiment_name)
+        pl_logger.watch(model)
+        pl_logger.log_hyperparams(vars(args))
 
-    # Callbacks
-    early_stopping = pl.callbacks.EarlyStopping(
-        monitor="val/loss", mode="min", patience=5
-    )
+    early_stopping = pl.callbacks.EarlyStopping(monitor="val/loss", mode="min", patience=5)
     checkpoint = pl.callbacks.ModelCheckpoint(
+        dirpath="training/checkpoints",
         filename="{epoch:03d}-{val_loss:.3f}",
         monitor="val/loss",
         mode="min",
         save_top_k=1,
     )
-    callbacks = [early_stopping, checkpoint]
-
-    # Trainer setup
-    trainer_args = {
-    "max_epochs": args.max_epochs,
-    "accelerator": args.accelerator,
-    "devices": args.devices,
-    "precision": args.precision,
-    }
-
     retrieval_callback = RetrievalMetricsCallback(datamodule=data, k=10, use_wandb=args.wandb)
-
     callbacks = [early_stopping, checkpoint, retrieval_callback]
 
-    trainer = pl.Trainer(**trainer_args, logger=logger, callbacks=callbacks)
+    trainer = pl.Trainer(
+        max_epochs=args.max_epochs,
+        accelerator=args.accelerator,
+        devices=args.devices,
+        precision=args.precision,
+        logger=pl_logger,
+        callbacks=callbacks,
+    )
 
-
-    # Training
     trainer.fit(model, datamodule=data)
     trainer.test(model, datamodule=data)
 
-    # Save log best model
     best_model_path = checkpoint.best_model_path
     if best_model_path:
-        print(f"[INFO] Best model saved at: {best_model_path}")
+        logger.info("Best model saved at: %s", best_model_path)
         if args.wandb:
             wandb.save(best_model_path)
-            print("[INFO] Uploaded best model to Weights & Biases.")
+            logger.info("Uploaded best model to Weights & Biases.")
 
 
 if __name__ == "__main__":

@@ -1,15 +1,15 @@
+import logging
+
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from sentence_transformers import SentenceTransformer
 from typing import Dict, Any
-import wandb
+
+logger = logging.getLogger(__name__)
 
 
 class CodeSearchModel(pl.LightningModule):
-    """
-    Bi-encoder model for code search using contrastive (InfoNCE) loss.
-    """
 
     def __init__(
         self,
@@ -28,7 +28,6 @@ class CodeSearchModel(pl.LightningModule):
             p.requires_grad = True
         self.encoder.train()
 
-        # Hyperparameters
         self.lr = lr
         self.temperature = temperature
         self.weight_decay = weight_decay
@@ -62,25 +61,18 @@ class CodeSearchModel(pl.LightningModule):
 
     def training_step(self, batch: Dict[str, Any], batch_idx: int):
         out = self(batch["queries"], batch["codes"])
-        loss = out["loss"]
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        if wandb.run is not None:
-            wandb.log({"train/loss": loss.item(), "step": self.global_step})
-        return loss
-    
+        self.log("train/loss", out["loss"], on_step=True, on_epoch=True, prog_bar=True)
+        return out["loss"]
+
     def validation_step(self, batch: Dict[str, Any], batch_idx: int):
         out = self(batch["queries"], batch["codes"])
-        loss = out["loss"]
-        self.log("val/loss", loss, prog_bar=True)
-        if wandb.run is not None:
-            wandb.log({"val/loss": loss.item(), "step": self.global_step})
-        return {"val_loss": loss}
+        self.log("val/loss", out["loss"], prog_bar=True)
+        return {"val_loss": out["loss"]}
 
     def test_step(self, batch: Dict[str, Any], batch_idx: int):
         out = self(batch["queries"], batch["codes"])
-        loss = out["loss"]
-        self.log("test/loss", loss)
-        return {"test_loss": loss}
+        self.log("test/loss", out["loss"])
+        return {"test_loss": out["loss"]}
 
     def configure_optimizers(self):
         opt = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
@@ -98,4 +90,4 @@ class CodeSearchModel(pl.LightningModule):
 
     def save_encoder(self, path: str):
         self.encoder.save(path)
-        print(f"[INFO] Saved encoder to {path}")
+        logger.info("Saved encoder to %s", path)

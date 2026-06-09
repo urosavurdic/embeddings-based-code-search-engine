@@ -1,2 +1,2 @@
-from .evaluation import SearchEngineEvaluator
+from .evaluation import SearchEngineEvaluator, build_relevance_dict
 from .evaluator_callback import RetrievalMetricsCallback

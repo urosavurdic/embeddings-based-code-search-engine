@@ -1,11 +1,14 @@
 import argparse
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+import pandas as pd
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import Dataset, DataLoader
-from collections import defaultdict
-import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -27,7 +30,7 @@ class CoSQADataset(Dataset):
         else:
             raise ValueError("Invalid split name. Use 'trainval' or 'test'.")
         
-        print(f"[INFO] Loading CoSQA {split} split...")
+        logger.info("Loading CoSQA %s split...", split)
         
         self.queries = []
         self.codes = []
@@ -52,8 +55,8 @@ class CoSQADataset(Dataset):
             self.codes.append(code)
             self.indices.append(code_idx)
         
-        print(f"[INFO] Loaded {len(self)} query-code pairs")
-        print(f"[INFO] Unique code snippets: {len(self.code_corpus)}")
+        logger.info("Loaded %d query-code pairs", len(self))
+        logger.info("Unique code snippets: %d", len(self.code_corpus))
     
     def __len__(self) -> int:
         return len(self.data)

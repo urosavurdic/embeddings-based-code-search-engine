@@ -1,11 +1,15 @@
 import argparse
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
+
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
-from collections import defaultdict
+
 from .cosqa_dataset import CoSQADataset
+
+logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 32
 NUM_WORKERS = 2
@@ -74,13 +78,13 @@ class CoSQADataModule(pl.LightningDataModule):
             self.code_corpus = full_dataset.code_corpus
             self.num_unique_codes = len(self.code_corpus)
 
-            print(f"[INFO] Train size: {len(self.data_train)}")
-            print(f"[INFO] Val size: {len(self.data_val)}")
+            logger.info("Train size: %d", len(self.data_train))
+            logger.info("Val size: %d", len(self.data_val))
 
         if stage == 'test' or stage is None:
             self.data_test = CoSQADataset(split='test')
 
-            print(f"[INFO] Test size: {len(self.data_test)}")
+            logger.info("Test size: %d", len(self.data_test))
         
     def train_dataloader(self) -> DataLoader:
         """
@@ -140,21 +144,6 @@ class CoSQADataModule(pl.LightningDataModule):
         """
         return self.code_corpus
 
-    def get_relevance_dict(self, dataset: CoSQADataset) -> Dict[str, List[int]]:
-        """
-        Build relevance dictionary mapping queries to relevant code indices.
-
-        Args:
-            dataset: CoSQADataset instance.
-
-        Returns:
-            Dictionary mapping query string to list of relevant code indices.
-        """
-        relevance = defaultdict(list)
-        for query, code, code_idx in dataset:
-            relevance[query].append(code_idx)
-        return dict(relevance)
-    
     def configuration(self) -> Dict:
         """
         Returns the configuration of the DataModule.
