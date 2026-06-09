@@ -37,9 +37,6 @@ class RetrievalMetricsCallback(pl.Callback):
 
         for key, value in metrics.items():
             trainer.logger.log_metrics({f"{split}/{key}": value}, step=trainer.global_step)
-            if self.use_wandb:
-                import wandb
-                wandb.log({f"{split}/{key}": value, "step": trainer.global_step})
 
         logger.info("%s metrics: %s", split.upper(), metrics)
 
