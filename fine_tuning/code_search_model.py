@@ -91,3 +91,18 @@ class CodeSearchModel(pl.LightningModule):
     def save_encoder(self, path: str):
         self.encoder.save(path)
         logger.info("Saved encoder to %s", path)
+
+    @classmethod
+    def load(cls, checkpoint_path: str) -> "CodeSearchModel":
+        """Load checkpoint, remapping sentence-transformers key differences between versions."""
+        ckpt = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        state_dict = ckpt["state_dict"]
+        # sentence-transformers renamed auto_model -> model in newer versions
+        remapped = {
+            k.replace("encoder.0.model.", "encoder.0.auto_model."): v
+            for k, v in state_dict.items()
+        }
+        model = cls(**ckpt.get("hyper_parameters", {}))
+        model.load_state_dict(remapped)
+        model.eval()
+        return model
